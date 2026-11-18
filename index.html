@@ -351,14 +351,16 @@
         console.log("Assigned condition number:", condition_num);
         console.log("Assigned concepts:", concept_list);
 
-        // osf = jUWywKNYnBTs
-        // zenodo = tDCzKzmAL4CJ
+
+        // SONA_pilot = 3oNQNzXlBH1X
+
+        // SONA_data = *****
 
         //save the data
         const save_data = {
             type: jsPsychPipe,
             action: "save",
-            experiment_id: "tDCzKzmAL4CJ",
+            experiment_id: "3oNQNzXlBH1X",
             filename: filename,
             wait_message: "Please wait while the next page loads.",
             data_string: () => jsPsych.data.get().csv()
