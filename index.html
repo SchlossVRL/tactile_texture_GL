@@ -151,7 +151,7 @@
             type: jsPsychHtmlButtonResponse,
             stimulus: `
                 <div style=text-align:left;>
-                <p>[Experimenter - Find and layout the 4 textures for this session: <b>${texture_list[0]}</b>, <b>${texture_list[1]}</b>, <b>${texture_list[2]}</b>, <b>${texture_list[3]}</b> and place the sample textures in the tray: <b>S53</b> LEFT, <b>F102</b> RIGHT. Set the bar heights in the sample tray to the top wide peg hole.]</p>
+                <p>[Experimenter - Find and layout the 4 textures for this session: <b>${texture_list[0]}</b>, <b>${texture_list[1]}</b>, <b>${texture_list[2]}</b>, <b>${texture_list[3]}</b> and place the sample textures in the tray: <b>S53</b> LEFT, <b>P75</b> RIGHT. Set the bar heights in the sample tray to the top wide peg hole.]</p>
                 <p>In this experiment you will be asked to imagine you are interpreting bar charts representing data about the concepts, <b>${concept_list[0]}</b> and <b>${concept_list[1]}</b>.</p>
                 <p>The bar chart will be presented in the box in front of you so that you won't be able to see it, but you can touch it. There is an example bar chart in the box now. I will now instruct you on how to explore the bar chart with your hand.</p> 
                 <p>To start please put your hand into the box under the curtain near the front of the box. Now, slowly move your pointer finger forward until you find the starting dot. [Experimenter: instruct to help them find the starting dot]. </p> 
@@ -300,39 +300,60 @@
         };
 
         const totalReps = 3;
+        const blocksPerRep = 2;
+        const totalBlocks = totalReps * blocksPerRep;
 
         // Repeat the entire experiment 3 times
         for (let rep = 1; rep <= totalReps; rep++) {
 
-            // Shuffle ALL trials for this repetition
-            let shuffledTrials = jsPsych.randomization.shuffle([...trials]);
+            // 1. Shuffle ALL trials for this repetition
+            let shuffledTrials = jsPsych.randomization.shuffle(
+                trials.map(t => ({ ...t }))
+            );
 
-            // Give every trial a reference to the next trial
-            for (let i = 0; i < shuffledTrials.length; i++) {
-                shuffledTrials[i].next_trial = shuffledTrials[i + 1] || null;
-            }
+            // 2. Split this repetition into two equal halves
+            let blockSize = Math.ceil(shuffledTrials.length / 2);
 
-            // Add the entire repetition as one block
-            timeline.push({
-                timeline: [iti, assign_trial],
-                timeline_variables: shuffledTrials.map(t => ({
-                    ...t,
-                    repetition: rep,
-                    block: rep
-                }))
-            });
+            let splitBlocks = [
+                shuffledTrials.slice(0, blockSize),
+                shuffledTrials.slice(blockSize)
+            ];
 
-            // Add a break between repetitions (not after the final repetition)
-            if (rep < totalReps) {
+            // 3. Add each half as its own block
+            for (let half = 0; half < blocksPerRep; half++) {
+
+                let blockTrials = splitBlocks[half];
+
+                // Calculate overall block number (1-6)
+                let blockNumber = (rep - 1) * blocksPerRep + half + 1;
+
+                // 4. Assign next_trial WITHIN this block only
+                for (let i = 0; i < blockTrials.length; i++) {
+                    blockTrials[i].next_trial = blockTrials[i + 1] || null;
+                }
+
+                // 5. Add block to timeline
                 timeline.push({
-                    type: jsPsychHtmlButtonResponse,
-                    stimulus: `
-                <p>You have completed block ${rep} of ${totalReps}.</p>
-                <p>Please take a short break if needed. If you would like a break from the headphones you may take them off during this break.</p>
-                <p>[Experimenter: When you are ready to begin have the participant put the headphones back on and check they can hear the noise. Click continue to start the trials again]</p>
-            `,
-                    choices: ['Continue']
+                    timeline: [iti, assign_trial],
+                    timeline_variables: blockTrials.map(t => ({
+                        ...t,
+                        repetition: rep,
+                        block: blockNumber
+                    }))
                 });
+
+                // 6. Add a break after every block except the last
+                if (blockNumber < totalBlocks) {
+                    timeline.push({
+                        type: jsPsychHtmlButtonResponse,
+                        stimulus: `
+                    <p>You have completed block ${blockNumber} of ${totalBlocks}.</p>
+                    <p>Please take a short break if needed. If you would like a break from the headphones you may take them off during this break.</p>
+                    <p>[Experimenter: When you are ready to begin have the participant put the headphones back on and check they can hear the noise. Click continue to start the trials again]</p>
+                `,
+                        choices: ['Continue']
+                    });
+                }
             }
         }
 
